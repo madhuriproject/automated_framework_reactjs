@@ -63,7 +63,7 @@ function App() {
     <BrowserRouter>
       <div className="app">
         <header className="header">
-          <h1>Automated Regression Framework UI</h1>
+          <h1>Automated Regression Framework</h1>
 
           <nav>
             <Link to="/">Tests</Link>

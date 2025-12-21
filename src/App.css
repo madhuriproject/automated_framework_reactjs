@@ -40,3 +40,23 @@
 .read-the-docs {
   color: #888;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+.report-table td {
+  vertical-align: middle;
+}
+
+.page-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
