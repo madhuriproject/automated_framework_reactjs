@@ -1,52 +1,98 @@
+// 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import React, { useEffect, useState } from "react";
 import { API_BASE } from "../config";
 import {
-  PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis
+  PieChart, Pie, Cell, Tooltip,
+  BarChart, Bar, XAxis, YAxis, Legend
 } from "recharts";
 
-const COLORS = ["#28a745", "#dc3545"];
+const PASS_COLOR = "#28a745";
+const FAIL_COLOR = "#dc3545";
 
-export default function AnalyticsChart({ suiteId }) {
-  const [data, setData] = useState([]);
+export default function AnalyticsChart({ executionId }) {
+  const [status, setStatus] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/analytics/trends/${suiteId}`)
+    fetch(`${API_BASE}/tests/executions/${executionId}`)
       .then(res => res.json())
-      .then(json => {
-        const chartData = Object.keys(json).map(k => ({
-          name: k,
-          value: json[k]
-        }));
-        setData(chartData);
+      .then(data => {
+        setStatus(data.status); // PASSED / FAILED
       });
-  }, [suiteId]);
+  }, [executionId]);
 
-  if (!data.length) return null;
+  if (!status) return null;
+
+  const isPassed = status === "PASSED";
+  const color = isPassed ? PASS_COLOR : FAIL_COLOR;
+
+  // Chart data (single execution)
+  const chartData = [
+    { name: status, value: 1 }
+  ];
 
   return (
-    <div style={{ display: "flex", gap: "40px", marginTop: "20px" }}>
-      
-      {/* PIE CHART */}
+    <div style={{ display: "flex", gap: "50px", marginTop: "30px" }}>
+
+      {/* ================= PIE CHART ================= */}
       <div>
         <h3>Result Distribution</h3>
-        <PieChart width={300} height={300}>
-          <Pie data={data} dataKey="value" nameKey="name" outerRadius={100}>
-            {data.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
-            ))}
+
+        <PieChart width={260} height={260}>
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            outerRadius={90}
+          >
+            <Cell fill={color} />
           </Pie>
-          <Tooltip />
+          <Tooltip formatter={() => status} />
         </PieChart>
+
+        {/* Small legend box */}
+        <div style={{ marginTop: "10px", display: "flex", alignItems: "center" }}>
+          <div
+            style={{
+              width: 14,
+              height: 14,
+              backgroundColor: color,
+              marginRight: 8
+            }}
+          />
+          <strong style={{ color }}>{status}</strong>
+        </div>
       </div>
 
-      {/* BAR CHART */}
+      {/* ================= BAR CHART ================= */}
       <div>
         <h3>Result Count</h3>
-        <BarChart width={300} height={300} data={data}>
+
+        <BarChart width={260} height={260} data={chartData}>
           <XAxis dataKey="name" />
-          <YAxis />
-          <Tooltip />
-          <Bar dataKey="value" />
+          <YAxis allowDecimals={false} />
+          <Tooltip formatter={() => status} />
+          <Bar dataKey="value" fill={color} />
         </BarChart>
       </div>
     </div>
