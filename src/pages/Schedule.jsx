@@ -1,45 +1,160 @@
+
+
 import React, { useState } from "react";
 import { API_BASE } from "../config";
+ import ScheduleChart from "../execution/ScheduleChart";
 
 export default function Schedule() {
+
+  /* ================= INPUT TABLE ================= */
+
   const [suiteName, setSuiteName] = useState("");
-  const [testIds, setTestIds] = useState("");
-  const [msg, setMsg] = useState("");
+  const [rows, setRows] = useState([{ testId: "" }]);
+  const [executions, setExecutions] = useState([]);
+  const [error, setError] = useState("");
 
-  async function submit(e) {
+  function addRow() {
+    setRows([...rows, { testId: "" }]);
+  }
+
+  function removeRow(index) {
+    setRows(rows.filter((_, i) => i !== index));
+  }
+
+  function updateRow(index, value) {
+    const updated = [...rows];
+    updated[index].testId = value;
+    setRows(updated);
+  }
+
+  /* ================= RUN SCHEDULE ================= */
+
+  async function runSchedule(e) {
     e.preventDefault();
+    setError("");
+    setExecutions([]);
 
-    let ids = testIds.split(",").map(x => Number(x.trim()));
+    const tests = rows
+      .map(r => Number(r.testId))
+      .filter(id => !isNaN(id));
 
-    const body = {
+    const payload = {
       suiteName,
-      triggeredBy: "UI",
+      triggeredBy: "QA-Team",
       executionMode: "PARALLEL",
-      testCaseIds: ids
+      tests
     };
 
-    const res = await fetch(`${API_BASE}/schedule/run`, {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify(body)
-    });
+    try {
+      const res = await fetch(`${API_BASE}/schedule/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-    let t = await res.text();
-    setMsg(t);
+      const data = await res.json();
+      setExecutions(data);
+    } catch {
+      setError("Failed to run schedule");
+    }
   }
 
   return (
     <section className="card">
+
       <h2>Schedule Test Suite</h2>
 
-      <form onSubmit={submit}>
-        <input placeholder="Suite Name" value={suiteName} onChange={(e)=>setSuiteName(e.target.value)} />
-        <input placeholder="Comma separated Test IDs" value={testIds} onChange={(e)=>setTestIds(e.target.value)} />
+      <input
+        placeholder="Suite Name"
+        value={suiteName}
+        onChange={e => setSuiteName(e.target.value)}
+      />
 
-        <button>Run Schedule</button>
-      </form>
+      {/* ================= TABLE INPUT ================= */}
 
-      <p>{msg}</p>
+      <table className="table table-bordered mt-3">
+        <thead className="table-dark">
+          <tr>
+            <th>Test ID</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i}>
+              <td>
+                <input
+                  value={r.testId}
+                  onChange={e => updateRow(i, e.target.value)}
+                />
+              </td>
+              <td>
+                {rows.length > 1 && (
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => removeRow(i)}
+                  >
+                    X
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <button className="btn btn-secondary btn-sm" onClick={addRow}>
+        + Add Row
+      </button>
+
+      <button className="btn btn-primary btn-sm ms-2" onClick={runSchedule}>
+        Run Schedule
+      </button>
+
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      {/* ================= RESULTS ================= */}
+
+      {executions.length > 0 && (
+        <>
+          <h3 className="mt-4">Execution Results</h3>
+
+          <table className="table table-bordered mt-2">
+            <thead className="table-dark">
+              <tr>
+                <th>Execution ID</th>
+                <th>Triggered By</th>
+                <th>Execution Mode</th>
+                <th>Status</th>
+                <th>Started At</th>
+                <th>Completed At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {executions.map(e => (
+                <tr key={e.id}>
+                  <td>{e.id}</td>
+                  <td>{e.triggeredBy}</td>
+                  <td>{e.executionMode}</td>
+                  <td
+                    style={{
+                      color: e.status === "PASSED" ? "green" : "red",
+                      fontWeight: "bold"
+                    }}
+                  >
+                    {e.status}
+                  </td>
+                  <td>{e.startedAt}</td>
+                  <td>{e.completedAt}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <ScheduleChart executions={executions} />
+        </>
+      )}
+
     </section>
   );
 }
